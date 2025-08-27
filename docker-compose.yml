@@ -1,0 +1,94 @@
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=admin
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - WEBHOOK_URL=http://localhost:5678/
+    volumes:
+      - ./n8n_data:/home/node/.n8n
+    depends_on:
+      fastapi:
+        condition: service_healthy
+    networks:
+      - localnet
+
+  python-base:
+    build:
+      context: ./python-base
+    image: local/python-base:latest
+    networks:
+      - localnet
+
+  elt:
+    image: local/python-base:latest
+    container_name: elt
+    working_dir: /app
+    command: >
+      bash -lc "
+        python -m pipelines.etl
+      "
+    volumes:
+      - ./app:/app:rw
+      - ./datalake:/datalake:rw
+    environment:
+      - PYTHONPATH=/app
+      - SPARK_LOCAL_IP=127.0.0.1
+      - SPARK_WORKER_DIR=/tmp/spark
+      - JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+      - DATA_LAKE=/datalake
+    networks:
+      - localnet
+
+  fastapi:
+    image: local/python-base:latest
+    container_name: fastapi
+    working_dir: /app
+    command: >
+      bash -lc "
+        uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+      "
+    volumes:
+      - ./app:/app:rw
+      - ./datalake:/datalake:rw
+    environment:
+      - DATA_LAKE=/datalake
+      - PYTHONPATH=/app
+      - JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "bash", "-lc", "curl -fsS http://localhost:8000/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    networks:
+      - localnet
+
+  streamlit:
+    image: local/python-base:latest
+    container_name: streamlit
+    working_dir: /app
+    command: >
+      bash -lc "
+        streamlit run chat/app.py --server.address 0.0.0.0 --server.port 8501
+      "
+    volumes:
+      - ./app:/app:rw
+      - ./datalake:/datalake:rw
+    environment:
+      - DATA_LAKE=/datalake
+    ports:
+      - "8501:8501"
+    networks:
+      - localnet
+
+networks:
+  localnet:
+    driver: bridge
