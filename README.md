@@ -23,7 +23,7 @@ Portas expostas:
 
 # Passo a passo para subir o ambiente
 
-1. Clone o repositório (se ainda não estiver no avaliador):
+1. Clone o repositório:
 ```bash
 git clone https://github.com/lucasfelicio/n8n-observatorio.git && cd n8n-observatorio
 ````
