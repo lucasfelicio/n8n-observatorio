@@ -57,5 +57,3 @@ Chat para interação: http://localhost:8501
 * GET /tables → lista tabelas disponíveis no GOLD_PATH.
 * GET /query → executa query SQL (parâmetro `sql` na query string).
 * GET /query/{table_name} → retorna as 10 primeiras linhas da tabela.
-
-Rotas adicionais podem existir para consultar tabelas (ex.: /data/<tabela>).
